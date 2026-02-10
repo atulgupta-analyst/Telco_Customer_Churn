@@ -8,9 +8,3 @@ ML/DL on IBM’s Telco Customer Churn Prediction.
 4. [GitCLI](https://git-scm.com/book/en/v2/Getting-Started-The-Command-Line)
 5. [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main)
 
-Create New Environment 
-'''
-conda create -p venv python==3.7 -y
-conda activate venv/
-Always use: python -m pip 
-'''
