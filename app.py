@@ -1,15 +1,30 @@
-# import pickle
 import json
+from pathlib import Path
 from flask import Flask, request, jsonify, render_template
 import pandas as pd
 from xgboost import XGBClassifier
 
+# -----------------------------
+# Flask App Initialization
+# -----------------------------
 app = Flask(__name__)
 
-# XGBoost model in native format, avoiding pickle due to version issues
-xgbmodel = XGBClassifier()
-xgbmodel.load_model("xgb_model.json")  
+# -----------------------------
+# Model Loading (Heroku Safe)
+# -----------------------------
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "xgb_model.json"
 
+xgbmodel = XGBClassifier()
+
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
+xgbmodel.load_model(str(MODEL_PATH))
+
+# -----------------------------
+# Feature Columns (Fixed Order)
+# -----------------------------
 FEATURE_COLS = [
     'tenure',
     'MonthlyCharges',
@@ -25,34 +40,49 @@ FEATURE_COLS = [
     'SeniorCitizen'
 ]
 
-THRESHOLD = 0.35  
+THRESHOLD = 0.35
 
+
+# -----------------------------
+# Routes
+# -----------------------------
 @app.route('/')
 def home():
     return render_template('home.html')
 
+
 @app.route('/predict_api', methods=['POST'])
 def predict_api():
-    payload = request.get_json(force=True)
-    data = payload.get("data", {})
+    try:
+        payload = request.get_json(force=True)
+        data = payload.get("data", {})
 
-    # Build a 1-row DataFrame with correct columns/order
-    X_single = pd.DataFrame(0, index=[0], columns=FEATURE_COLS)
+        # Create empty DataFrame with correct columns
+        X_single = pd.DataFrame(0, index=[0], columns=FEATURE_COLS)
 
-    # Fill only provided keys (ignore unknown keys)
-    for k, v in data.items():
-        if k in X_single.columns:
-            X_single.loc[0, k] = v
+        # Fill provided features only
+        for k, v in data.items():
+            if k in X_single.columns:
+                X_single.loc[0, k] = v
 
-    # Predict probability + apply threshold
-    churn_prob = float(xgbmodel.predict_proba(X_single)[:, 1][0])
-    churn_pred = int(churn_prob >= THRESHOLD)
+        # Predict probability
+        churn_prob = float(xgbmodel.predict_proba(X_single)[:, 1][0])
+        churn_pred = int(churn_prob >= THRESHOLD)
 
-    return jsonify({
-        "churn_probability": round(churn_prob, 4),
-        "threshold": THRESHOLD,
-        "prediction": churn_pred  # 1 = churn, 0 = no churn
-    })
+        return jsonify({
+            "churn_probability": round(churn_prob, 4),
+            "threshold": THRESHOLD,
+            "prediction": churn_pred
+        })
 
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        }), 500
+
+
+# -----------------------------
+# Local Run Only (NOT used by Heroku)
+# -----------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
