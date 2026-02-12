@@ -2,44 +2,40 @@ name: Deploy to Heroku (Docker)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      # This avoids OCI/BuildKit manifests that can trigger "unsupported" on Heroku registry
+      DOCKER_BUILDKIT: "0"
+
     steps:
-      # Checkout repo
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Install Heroku CLI
       - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
+        run: curl https://cli-assets.heroku.com/install.sh | sh
 
-      # Login to Heroku Container Registry
-      - name: Login to Heroku Container Registry
+      # Login using Heroku CLI (more compatible than raw docker login in many cases)
+      - name: Heroku Container Login
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:login
+
+      # Push using Heroku CLI (avoids unsupported manifest issues)
+      - name: Build and Push Container
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+          heroku container:push web --app ${{ secrets.HEROKU_APP_NAME }}
 
-      # Build Docker image
-      - name: Build Docker Image
-        run: |
-          docker build -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
-
-      # Push Docker image
-      - name: Push Docker Image
-        run: |
-          docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
-
-      # Release container
-      - name: Release to Heroku
+      - name: Release Container
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
           heroku container:release web --app ${{ secrets.HEROKU_APP_NAME }}
+
