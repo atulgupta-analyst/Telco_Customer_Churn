@@ -19,16 +19,13 @@ jobs:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: heroku container:login
 
-      - name: Build image (force linux/amd64)
-        run: |
-          docker build --platform linux/amd64 -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
+      - name: Build image
+        run: docker build --platform linux/amd64 -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
 
       - name: Push image
-        run: |
-          docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
+        run: docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
 
       - name: Release image
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          heroku container:release web -a ${{ secrets.HEROKU_APP_NAME }}
+        run: heroku container:release web -a ${{ secrets.HEROKU_APP_NAME }}
