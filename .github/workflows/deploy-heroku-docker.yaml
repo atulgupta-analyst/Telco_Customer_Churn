@@ -2,30 +2,44 @@ name: Deploy to Heroku (Docker)
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
 
+      # Install Heroku CLI
       - name: Install Heroku CLI
-        run: curl https://cli-assets.heroku.com/install.sh | sh
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
 
+      # Login to Heroku Container Registry
       - name: Login to Heroku Container Registry
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku container:login
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
 
-      - name: Build image
-        run: docker build --platform linux/amd64 -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
+      # Build Docker image
+      - name: Build Docker Image
+        run: |
+          docker build -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
 
-      - name: Push image
-        run: docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
+      # Push Docker image
+      - name: Push Docker Image
+        run: |
+          docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
 
-      - name: Release image
+      # Release container
+      - name: Release to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: heroku container:release web -a ${{ secrets.HEROKU_APP_NAME }}
+        run: |
+          heroku container:release web --app ${{ secrets.HEROKU_APP_NAME }}
