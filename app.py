@@ -58,7 +58,7 @@ def predict_api():
         data = payload.get("data", {})
 
         # Create empty DataFrame with correct columns
-        X_single = pd.DataFrame(0, index=[0], columns=FEATURE_COLS)
+        X_single = pd.DataFrame(0.0, index=[0], columns=FEATURE_COLS)
 
         # Fill provided features only
         for k, v in data.items():
