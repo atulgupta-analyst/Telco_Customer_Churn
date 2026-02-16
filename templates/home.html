@@ -1,108 +1,474 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Telco Churn Prediction</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f8;
-        }
-        .container {
-            width: 500px;
-            margin: 40px auto;
-            background: #ffffff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h2 {
-            text-align: center;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-top: 10px;
-        }
-        input {
-            width: 100%;
-            padding: 6px;
-            margin-top: 4px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            background: #eef;
-            text-align: center;
-            font-size: 18px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telco Churn Prediction</title>
+
+  <style>
+    :root{
+      --bg:#f4f6f8;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --shadow:0 10px 25px rgba(0,0,0,0.08);
+      --primary:#2563eb;
+      --primaryHover:#1d4ed8;
+
+      /* Risk colors (no JS libs; pure CSS) */
+      --lowBg:#ecfdf5;    --lowBorder:#10b981;   --lowText:#065f46;
+      --medBg:#fffbeb;    --medBorder:#f59e0b;   --medText:#92400e;
+      --highBg:#fef2f2;   --highBorder:#ef4444;  --highText:#991b1b;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 18px;
+    }
+
+    .container{
+      width: 95%;
+      max-width: 900px;
+      margin: 18px auto;
+      background: var(--card);
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .header{
+      text-align:center;
+      margin-bottom: 14px;
+    }
+    .header h1{
+      margin: 0 0 6px 0;
+      font-size: 22px;
+      letter-spacing: .2px;
+    }
+    .header p{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section{
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fafafa;
+    }
+    .section-title{
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #111827;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .section-title span{
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    label{
+      font-weight: 600;
+      display:block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    input{
+      width: 100%;
+      padding: 10px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+    input:focus{
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    .help{
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Two-column grid for desktop, auto stacks on small screens */
+    .grid-2{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 768px){
+      .grid-2{
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 20px;
+      }
+    }
+
+    button{
+      width: 100%;
+      padding: 12px;
+      margin-top: 18px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .15s ease-in-out;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    button:hover{ background: var(--primaryHover); }
+    button:disabled{ opacity: .75; cursor: not-allowed; }
+
+    /* Minimal spinner */
+    .spinner{
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255,255,255,0.45);
+      border-top-color: #fff;
+      border-radius: 50%;
+      display: none;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result area */
+    .resultWrap{
+      margin-top: 16px;
+      display: none;
+    }
+
+    .riskCard{
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .riskTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .riskTitle{
+      font-size: 14px;
+      font-weight: 800;
+      margin: 0;
+    }
+    .riskBadge{
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+    .riskMeta{
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .metrics{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    @media (min-width: 768px){
+      .metrics{
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+    .metric{
+      padding: 10px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .metric .k{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .metric .v{
+      font-size: 16px;
+      font-weight: 900;
+      color: #111827;
+    }
+
+    /* Auto risk color states */
+    .risk-low{
+      background: var(--lowBg);
+      border-color: rgba(16,185,129,0.5);
+    }
+    .risk-low .riskBadge{
+      border-color: var(--lowBorder);
+      color: var(--lowText);
+      background: rgba(16,185,129,0.10);
+    }
+
+    .risk-medium{
+      background: var(--medBg);
+      border-color: rgba(245,158,11,0.55);
+    }
+    .risk-medium .riskBadge{
+      border-color: var(--medBorder);
+      color: var(--medText);
+      background: rgba(245,158,11,0.12);
+    }
+
+    .risk-high{
+      background: var(--highBg);
+      border-color: rgba(239,68,68,0.55);
+    }
+    .risk-high .riskBadge{
+      border-color: var(--highBorder);
+      color: var(--highText);
+      background: rgba(239,68,68,0.10);
+    }
+
+    .footerNote{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+  </style>
 </head>
 
 <body>
-<div class="container">
-    <h2>Telco Customer Churn Prediction</h2>
+  <div class="container">
+    <div class="header">
+      <h1>Telco Customer Churn Prediction</h1>
+      <p>Enter customer details to estimate churn probability (XGBoost model).</p>
+    </div>
 
     <form id="predictForm">
-        <label>Tenure (months)</label>
-        <input type="number" id="tenure" step="1" required>
+      <!-- Section 1: Charges & Usage -->
+      <div class="section">
+        <div class="section-title">
+          Charges & Usage <span>(numeric inputs)</span>
+        </div>
 
-        <label>Monthly Charges</label>
-        <input type="number" id="MonthlyCharges" step="0.01" required>
+        <div class="grid-2">
+          <div>
+            <label for="tenure">Tenure (months)</label>
+            <input type="number" id="tenure" step="1" min="0" required />
+            <div class="help">How long the customer has been with the provider.</div>
+          </div>
 
-        <label>Total Charges</label>
-        <input type="number" id="TotalCharges" step="0.01" required>
+          <div>
+            <label for="TotalServicesSubscribed">Total Services Subscribed</label>
+            <input type="number" id="TotalServicesSubscribed" step="1" min="0" required />
+            <div class="help">Count of subscribed add-on/services.</div>
+          </div>
 
-        <label>Total Services Subscribed</label>
-        <input type="number" id="TotalServicesSubscribed" step="1" required>
+          <div>
+            <label for="MonthlyCharges">Monthly Charges</label>
+            <input type="number" id="MonthlyCharges" step="0.01" min="0" required />
+          </div>
 
-        <label>Contract: Month-to-month (1=yes, 0=no)</label>
-        <input type="number" id="Contract_Month-to-month" min="0" max="1" required>
+          <div>
+            <label for="TotalCharges">Total Charges</label>
+            <input type="number" id="TotalCharges" step="0.01" min="0" required />
+          </div>
+        </div>
+      </div>
 
-        <label>Contract: Two year (1=yes, 0=no)</label>
-        <input type="number" id="Contract_Two year" min="0" max="1" required>
+      <!-- Section 2: Contract -->
+      <div class="section">
+        <div class="section-title">
+          Contract Details <span>(binary: 1=yes, 0=no)</span>
+        </div>
 
-        <label>Internet Service: Fiber optic (1=yes, 0=no)</label>
-        <input type="number" id="InternetService_Fiber optic" min="0" max="1" required>
+        <div class="grid-2">
+          <div>
+            <label for="Contract_Month-to-month">Contract: Month-to-month</label>
+            <input type="number" id="Contract_Month-to-month" min="0" max="1" required />
+          </div>
 
-        <label>Paperless Billing (1=yes, 0=no)</label>
-        <input type="number" id="PaperlessBilling" min="0" max="1" required>
+          <div>
+            <label for="Contract_Two year">Contract: Two year</label>
+            <input type="number" id="Contract_Two year" min="0" max="1" required />
+          </div>
 
-        <label>Payment Method: Electronic Check (1=yes, 0=no)</label>
-        <input type="number" id="PaymentMethod_Electronic check" min="0" max="1" required>
+          <div>
+            <label for="PaperlessBilling">Paperless Billing</label>
+            <input type="number" id="PaperlessBilling" min="0" max="1" required />
+          </div>
 
-        <label>Payment Method: Bank Transfer (automatic) (1=yes, 0=no)</label>
-        <input type="number" id="PaymentMethod_Bank transfer (automatic)" min="0" max="1" required>
+          <div>
+            <label for="SeniorCitizen">Senior Citizen</label>
+            <input type="number" id="SeniorCitizen" min="0" max="1" required />
+          </div>
+        </div>
+      </div>
 
-        <label>Device Protection (1=yes, 0=no)</label>
-        <input type="number" id="DeviceProtection" min="0" max="1" required>
+      <!-- Section 3: Services & Payment -->
+      <div class="section">
+        <div class="section-title">
+          Services & Payment <span>(binary: 1=yes, 0=no)</span>
+        </div>
 
-        <label>Senior Citizen (1=yes, 0=no)</label>
-        <input type="number" id="SeniorCitizen" min="0" max="1" required>
+        <div class="grid-2">
+          <div>
+            <label for="InternetService_Fiber optic">Internet Service: Fiber optic</label>
+            <input type="number" id="InternetService_Fiber optic" min="0" max="1" required />
+          </div>
 
-        <button type="submit">Predict Churn</button>
+          <div>
+            <label for="DeviceProtection">Device Protection</label>
+            <input type="number" id="DeviceProtection" min="0" max="1" required />
+          </div>
+
+          <div>
+            <label for="PaymentMethod_Electronic check">Payment Method: Electronic check</label>
+            <input type="number" id="PaymentMethod_Electronic check" min="0" max="1" required />
+          </div>
+
+          <div>
+            <label for="PaymentMethod_Bank transfer (automatic)">Payment Method: Bank transfer (automatic)</label>
+            <input type="number" id="PaymentMethod_Bank transfer (automatic)" min="0" max="1" required />
+          </div>
+        </div>
+      </div>
+
+      <button id="predictBtn" type="submit">
+        <span id="btnText">Predict Churn</span>
+        <span class="spinner" id="spinner"></span>
+      </button>
     </form>
 
-    <div class="result" id="result"></div>
-</div>
+    <!-- Result -->
+    <div class="resultWrap" id="resultWrap">
+      <div class="riskCard" id="riskCard">
+        <div class="riskTop">
+          <div>
+            <p class="riskTitle" id="riskTitle">Result</p>
+            <p class="riskMeta" id="riskMeta">—</p>
+          </div>
+          <div class="riskBadge" id="riskBadge">—</div>
+        </div>
 
-<script>
-document.getElementById("predictForm").addEventListener("submit", function(e) {
-    e.preventDefault();
+        <div class="metrics">
+          <div class="metric">
+            <div class="k">Churn Probability</div>
+            <div class="v" id="probVal">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">Threshold</div>
+            <div class="v" id="thrVal">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">Prediction</div>
+            <div class="v" id="predVal">—</div>
+          </div>
+        </div>
 
-    const data = {
+        <div class="footerNote" id="footerNote">
+          Risk band is derived from the predicted probability.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function clamp01(x){
+      if (Number.isNaN(x)) return 0;
+      return Math.max(0, Math.min(1, x));
+    }
+
+    function setLoading(isLoading){
+      const btn = document.getElementById("predictBtn");
+      const sp = document.getElementById("spinner");
+      const txt = document.getElementById("btnText");
+      btn.disabled = isLoading;
+      sp.style.display = isLoading ? "inline-block" : "none";
+      txt.textContent = isLoading ? "Predicting..." : "Predict Churn";
+    }
+
+    function formatProb(p){
+      // show like 0.3521
+      return (Math.round(p * 10000) / 10000).toFixed(4);
+    }
+
+    function setRiskCard(churnProb, threshold, prediction){
+      const card = document.getElementById("riskCard");
+      const wrap = document.getElementById("resultWrap");
+
+      const prob = clamp01(churnProb);
+      const thr = Number(threshold);
+
+      // Define bands (you can tweak)
+      // Low: < 0.30, Medium: 0.30–0.60, High: > 0.60
+      let band = "LOW";
+      let bandClass = "risk-low";
+      let metaText = "Low churn risk. Customer likely to stay.";
+
+      if (prob >= 0.60){
+        band = "HIGH";
+        bandClass = "risk-high";
+        metaText = "High churn risk. Consider retention actions.";
+      } else if (prob >= 0.30){
+        band = "MEDIUM";
+        bandClass = "risk-medium";
+        metaText = "Medium churn risk. Monitor and engage proactively.";
+      }
+
+      // Reset classes
+      card.classList.remove("risk-low", "risk-medium", "risk-high");
+      card.classList.add(bandClass);
+
+      document.getElementById("riskTitle").textContent = "Churn Risk Assessment";
+      document.getElementById("riskBadge").textContent = band + " RISK";
+      document.getElementById("riskMeta").textContent = metaText;
+
+      document.getElementById("probVal").textContent = formatProb(prob);
+      document.getElementById("thrVal").textContent = (Math.round(thr * 100) / 100).toFixed(2);
+
+      const label = Number(prediction) === 1 ? "CHURN" : "NO CHURN";
+      document.getElementById("predVal").textContent = label;
+
+      document.getElementById("footerNote").textContent =
+        `Model decision uses threshold ${ (Math.round(thr * 100) / 100).toFixed(2) }. ` +
+        `Risk band is a UI indicator based on probability.`;
+
+      wrap.style.display = "block";
+      wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    document.getElementById("predictForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const data = {
         "tenure": Number(document.getElementById("tenure").value),
         "MonthlyCharges": Number(document.getElementById("MonthlyCharges").value),
         "TotalCharges": Number(document.getElementById("TotalCharges").value),
@@ -115,22 +481,39 @@ document.getElementById("predictForm").addEventListener("submit", function(e) {
         "PaymentMethod_Bank transfer (automatic)": Number(document.getElementById("PaymentMethod_Bank transfer (automatic)").value),
         "DeviceProtection": Number(document.getElementById("DeviceProtection").value),
         "SeniorCitizen": Number(document.getElementById("SeniorCitizen").value)
-    };
+      };
 
-    fetch("/predict_api", {
+      setLoading(true);
+
+      fetch("/predict_api", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"data": data})
-    })
-    .then(response => response.json())
-    .then(result => {
-        const label = result.prediction === 1 ? "CHURN" : "NO CHURN";
-        document.getElementById("result").innerHTML =
-            `Churn Probability: <b>${result.churn_probability}</b><br>
-             Prediction: <b>${label}</b>`;
+      })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error){
+          throw new Error(result.error);
+        }
+        setRiskCard(result.churn_probability, result.threshold, result.prediction);
+      })
+      .catch(err => {
+        const wrap = document.getElementById("resultWrap");
+        const card = document.getElementById("riskCard");
+        card.classList.remove("risk-low","risk-medium","risk-high");
+        card.style.background = "#fff";
+        card.style.borderColor = "rgba(239,68,68,0.55)";
+        document.getElementById("riskTitle").textContent = "Error";
+        document.getElementById("riskBadge").textContent = "FAILED";
+        document.getElementById("riskMeta").textContent = err.message || "Something went wrong.";
+        document.getElementById("probVal").textContent = "—";
+        document.getElementById("thrVal").textContent = "—";
+        document.getElementById("predVal").textContent = "—";
+        document.getElementById("footerNote").textContent = "Please re-check inputs and try again.";
+        wrap.style.display = "block";
+      })
+      .finally(() => setLoading(false));
     });
-});
-</script>
-
+  </script>
 </body>
 </html>
